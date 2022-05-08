@@ -55,6 +55,19 @@ async function parseDocument(documentId) {
 }
 
 /**
+ * Get all of the text in between two indices.
+ *
+ * @param {*} content
+ */
+function getTextInBetween(start, end, content) {
+    let text = [];
+    for (var i = start; i < end; i++) {
+        text.push(content[i].paragraph);
+    }
+    return text;
+}
+
+/**
  *  A generator function that helps us parse a single verse when called.
  *
  *  @param {Object} document
@@ -123,8 +136,61 @@ function getVerseIndices(document) {
 function parseIntro(document) {
     let content = document.body.content;
     let introStart = findIntroStart(content);
-    let intro = { start: introStart };
+    let sections = findIntroSections(content);
+    // Now that we have found the actual sections, all that remains is to parse the space in between the sections.
+    sections.forEach((section) => {
+        section.text = getTextInBetween(
+            section.start_index + 1,
+            section.end_index,
+            content
+        );
+    });
+    let intro = { start: introStart, sections };
     return intro;
+}
+
+function findIntroSections(content) {
+    sections = [];
+    for (var line_index = 0; line_index < content.length; line_index++) {
+        // Find the start of the intro
+        line = content[line_index];
+        let style = line?.paragraph?.paragraphStyle;
+        let elements = line?.paragraph?.elements;
+        if (style && elements) {
+            // This is where we check for the center alignment and bold text
+            for (e = 0; e < elements.length; e++) {
+                if (elements[e]?.horizontalRule) {
+                    console.log("Found the end of the intro");
+                    if (sections.length > 0) {
+                        sections[sections.length - 1].end_index = line_index;
+                    }
+                    return sections;
+                }
+            }
+            if (style.alignment == "CENTER") {
+                elements.forEach((e) => {
+                    let textStyle = e?.textRun?.textStyle;
+                    console.log(textStyle);
+                    if (
+                        textStyle &&
+                        textStyle.fontSize.magnitude == 16 &&
+                        textStyle.weightedFontFamily.fontFamily == "Montserrat"
+                    ) {
+                        console.log("We found an intro section", line_index);
+                        if (sections.length > 0) {
+                            sections[sections.length - 1].end_index =
+                                line_index;
+                        }
+                        sections.push({
+                            title: e.textRun.content,
+                            start_index: line_index,
+                        });
+                    }
+                });
+            }
+        }
+    }
+    return sections;
 }
 
 function findIntroStart(content) {
