@@ -123,8 +123,47 @@ function getVerseIndices(document) {
 function parseIntro(document) {
     let content = document.body.content;
     let introStart = findIntroStart(content);
-    let intro = { start: introStart };
+    let sections = findIntroSections(content);
+    // Now that we have found the actual sections, all that remains is to parse the space in between the sections.
+    let intro = { start: introStart, sections };
     return intro;
+}
+
+function findIntroSections(content) {
+    sections = [];
+    for (var line_index = 0; line_index < content.length; line_index++) {
+        // Find the start of the intro
+        line = content[line_index];
+        let style = line?.paragraph?.paragraphStyle;
+        let elements = line?.paragraph?.elements;
+        if (style && elements) {
+            // This is where we check for the center alignment and bold text
+            for (e = 0; e < elements.length; e++) {
+                if (elements[e]?.horizontalRule) {
+                    console.log("Found the end of the intro")
+                    return sections;
+                }
+            }
+            if (style.alignment == "CENTER") {
+                elements.forEach((e) => {
+                    let textStyle = e?.textRun?.textStyle;
+                    console.log(textStyle);
+                    if (
+                        textStyle &&
+                        textStyle.fontSize.magnitude == 16 &&
+                        textStyle.weightedFontFamily.fontFamily == "Montserrat"
+                    ) {
+                        console.log("We found an intro section", line_index);
+                        sections.push({
+                            section_index: line_index,
+                            title: e.textRun.conent,
+                        });
+                    }
+                });
+            }
+        }
+    }
+    return sections;
 }
 
 function findIntroStart(content) {
