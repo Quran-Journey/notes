@@ -140,7 +140,7 @@ function parseIntro(document) {
     // Now that we have found the actual sections, all that remains is to parse the space in between the sections.
     sections.forEach((section) => {
         section.text = getTextInBetween(
-            section.start_index,
+            section.start_index + 1,
             section.end_index,
             content
         );
