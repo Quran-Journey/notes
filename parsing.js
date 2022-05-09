@@ -67,6 +67,30 @@ function getTextInBetween(start, end, content) {
     return text;
 }
 
+function findKeyWords(content, words, start_index) {
+    let foundIntro = false;
+    for (
+        var line_index = start_index;
+        line_index < content.length && !foundIntro;
+        line_index++
+    ) {
+        // Find the start of the intro
+        line = content[line_index];
+        let elements = line?.paragraph?.elements;
+        if (elements) {
+            // This is where we look for the title "INTRODUCTION"
+            elements.forEach((e) => {
+                if (e?.textRun?.content.includes(words)) {
+                    console.log(`We found the ${words}`, line_index);
+                    introStart = line_index;
+                    foundIntro = true;
+                }
+            });
+        }
+    }
+    return introStart;
+}
+
 /**
  *  A generator function that helps us parse a single verse when called.
  *
@@ -199,30 +223,6 @@ function findIntroSections(content) {
     return sections;
 }
 
-function findKeyWords(content, words, start_index) {
-    let foundIntro = false;
-    for (
-        var line_index = start_index;
-        line_index < content.length && !foundIntro;
-        line_index++
-    ) {
-        // Find the start of the intro
-        line = content[line_index];
-        let elements = line?.paragraph?.elements;
-        if (elements) {
-            // This is where we look for the title "INTRODUCTION"
-            elements.forEach((e) => {
-                if (e?.textRun?.content.includes(words)) {
-                    console.log(`We found the ${words}`, line_index);
-                    introStart = line_index;
-                    foundIntro = true;
-                }
-            });
-        }
-    }
-    return introStart;
-}
-
 /**
  * A function that focuses on parsing the linguistics of a verse
  *
@@ -256,6 +256,7 @@ function parseInterpretations(document, verse_loc) {
  */
 function parseComments(document, verse_loc) {
     let comments = {};
+    let commentStart = findKeyWords(document.body.content, "QJ Commentary", 0);
     return comments;
 }
 
