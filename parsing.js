@@ -42,7 +42,7 @@ async function parseDocument(documentId) {
     let parsed = {
         chapter: Object.keys(indices)[0].split(":")[0],
         verses: {},
-        intro: intro,
+        intro,
     };
     let verse;
     let done;
@@ -135,7 +135,7 @@ function getVerseIndices(document) {
  */
 function parseIntro(document) {
     let content = document.body.content;
-    let introStart = findIntroStart(content);
+    let introStart = findKeyWords(content, "INTRODUCTION", 0);
     let sections = findIntroSections(content);
     // Now that we have found the actual sections, all that remains is to parse the space in between the sections.
     sections.forEach((section) => {
@@ -145,10 +145,16 @@ function parseIntro(document) {
             content
         );
     });
+
     let intro = { start: introStart, sections };
     return intro;
 }
 
+/**
+ * Find all of the intro sections based on their font family and size.
+ * @param {*} content
+ * @returns all intro sections
+ */
 function findIntroSections(content) {
     sections = [];
     for (var line_index = 0; line_index < content.length; line_index++) {
@@ -193,10 +199,10 @@ function findIntroSections(content) {
     return sections;
 }
 
-function findIntroStart(content) {
+function findKeyWords(content, words, start_index) {
     let foundIntro = false;
     for (
-        var line_index = 0;
+        var line_index = start_index;
         line_index < content.length && !foundIntro;
         line_index++
     ) {
@@ -206,8 +212,8 @@ function findIntroStart(content) {
         if (elements) {
             // This is where we look for the title "INTRODUCTION"
             elements.forEach((e) => {
-                if (e?.textRun.content.includes("INTRODUCTION")) {
-                    console.log("We found the intro", line_index);
+                if (e?.textRun?.content.includes(words)) {
+                    console.log(`We found the ${words}`, line_index);
                     introStart = line_index;
                     foundIntro = true;
                 }
