@@ -69,19 +69,20 @@ function getTextInBetween(start, end, content) {
 
 function findKeyWords(content, words, start_index) {
     let foundIntro = false;
+    console.log("Start index: ", start_index);
+    let introStart;
     for (
-        var line_index = start_index;
+        let line_index = start_index;
         line_index < content.length && !foundIntro;
         line_index++
     ) {
         // Find the start of the intro
-        line = content[line_index];
+        let line = content[line_index];
         let elements = line?.paragraph?.elements;
         if (elements) {
             // This is where we look for the title "INTRODUCTION"
             elements.forEach((e) => {
                 if (e?.textRun?.content.includes(words)) {
-                    console.log(`We found the ${words}`, line_index);
                     introStart = line_index;
                     foundIntro = true;
                 }
@@ -108,8 +109,7 @@ function* verseGenerator(document, verses) {
         verse.text = fetchVerse(verse_ids[v]);
         verse.linguistics = parseLinguistics(document, verse_location);
         verse.interpretations = parseInterpretations(document, verse_location);
-        verse.comments = parseComments(document, verse_location);
-        console.log(verse);
+        verse.comment = parseComment(document, verse_location);
         yield verse;
     }
 }
@@ -147,7 +147,6 @@ function getVerseIndices(document) {
             }
         });
     });
-    console.log(verses);
     return verses;
 }
 
@@ -190,7 +189,6 @@ function findIntroSections(content) {
             // This is where we check for the center alignment and bold text
             for (e = 0; e < elements.length; e++) {
                 if (elements[e]?.horizontalRule) {
-                    console.log("Found the end of the intro");
                     if (sections.length > 0) {
                         sections[sections.length - 1].end_index = line_index;
                     }
@@ -200,13 +198,11 @@ function findIntroSections(content) {
             if (style.alignment == "CENTER") {
                 elements.forEach((e) => {
                     let textStyle = e?.textRun?.textStyle;
-                    console.log(textStyle);
                     if (
                         textStyle &&
                         textStyle.fontSize.magnitude == 16 &&
                         textStyle.weightedFontFamily.fontFamily == "Montserrat"
                     ) {
-                        console.log("We found an intro section", line_index);
                         if (sections.length > 0) {
                             sections[sections.length - 1].end_index =
                                 line_index;
@@ -248,16 +244,54 @@ function parseInterpretations(document, verse_loc) {
 }
 
 /**
+ * Find the index of the next verse so that we can parse everything between it.
+ * This function might be redundant because we found all of the indices in the very beginning.
+ *
+ * @param {integer} current_location
+ * @returns
+ */
+function findStartOfNextVerse(document, current_location) {
+    for (
+        var line_index = current_location;
+        line_index < document.length;
+        line_index++
+    ) {
+        line = content[line_index];
+        let elements = line?.paragraph?.elements;
+        for (e = 0; e < elements.length; e++) {
+            if (elements[e]?.horizontalRule) {
+                console.log("Found the start of the next verse");
+                return line_index;
+            }
+        }
+    }
+}
+
+/**
  *  A function that focuses on parsing comments.
  *
  *  @param {Object} document
  *  @param {int} verse_loc
  *  @returns an object containing the comments for a verse
  */
-function parseComments(document, verse_loc) {
-    let comments = {};
-    let commentStart = findKeyWords(document.body.content, "QJ Commentary", 0);
-    return comments;
+function parseComment(document, verse_loc) {
+    let comment = {};
+    let commentStart = findKeyWords(
+        document.body.content,
+        "QJ Commentary",
+        verse_loc
+    );
+    console.log(verse_loc);
+    if (commentStart) {
+        comment.start_index = commentStart;
+        comment.end = findStartOfNextVerse(document, verse_loc);
+        comment.content = getTextInBetween(
+            comment.start_index,
+            comment.end,
+            document
+        );
+    }
+    return comment;
 }
 
 // Feel free to add any helper functions below this comment but above the module exports.
