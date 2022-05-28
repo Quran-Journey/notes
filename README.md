@@ -1,3 +1,4 @@
+### Please note that work on this repository has been paused and more priority is being placed elsewhere
 # Parsing surah notes using google docs
 
 A google docs parser that utlizes google apis to parse Quran Journey surah notes.
