@@ -57,7 +57,10 @@ async function parseDocument(documentId) {
 /**
  * Get all of the text in between two indices.
  *
- * @param {*} content
+ * @param {int} start
+ * @param {int} end
+ * @param {Object} content, basically whole document
+ * @returns text array wich contains all the text in between start and end
  */
 function getTextInBetween(start, end, content) {
     let text = [];
@@ -86,6 +89,8 @@ function* verseGenerator(document, verses) {
         verse.interpretations = parseInterpretations(document, verse_location);
         verse.comments = parseComments(document, verse_location);
         console.log(verse);
+
+        // what is this??
         yield verse;
     }
 }
@@ -96,6 +101,8 @@ function* verseGenerator(document, verses) {
  * @param {string} verse_id
  * @return a verse object that contains the arabic uthmani repr, transliteration... and?
  */
+
+// Not done yet
 function fetchVerse(verse_id) {
     let verse = {};
     return verse;
@@ -107,6 +114,8 @@ function fetchVerse(verse_id) {
  *  @param {*} document
  *  @returns an array of key value pairs (chapter:verse): index
  */
+
+// ex: 85:1
 function getVerseIndices(document) {
     let new_format;
     let content = document.body.content;
@@ -114,6 +123,7 @@ function getVerseIndices(document) {
     let verse;
     content.forEach((line, line_index) => {
         line?.paragraph?.elements.forEach((element) => {
+            // what is the horizontal rule??
             if (element?.horizontalRule) {
                 verse =
                     content[
@@ -149,6 +159,9 @@ function parseIntro(document) {
     return intro;
 }
 
+// What is the point of looping through
+// all the lines again when you already found 
+// the start of the intro
 function findIntroSections(content) {
     sections = [];
     for (var line_index = 0; line_index < content.length; line_index++) {
@@ -158,6 +171,8 @@ function findIntroSections(content) {
         let elements = line?.paragraph?.elements;
         if (style && elements) {
             // This is where we check for the center alignment and bold text
+
+            // what does the end of the intro look like?
             for (e = 0; e < elements.length; e++) {
                 if (elements[e]?.horizontalRule) {
                     console.log("Found the end of the intro");
@@ -167,6 +182,8 @@ function findIntroSections(content) {
                     return sections;
                 }
             }
+
+            // found an intro section
             if (style.alignment == "CENTER") {
                 elements.forEach((e) => {
                     let textStyle = e?.textRun?.textStyle;
@@ -193,8 +210,16 @@ function findIntroSections(content) {
     return sections;
 }
 
+/**
+ * A function that focuses on parsing the linguistics of a verse
+ *
+ * @param {Object} content
+ * @returns line_index, where the title "INTRODUCTION" is found
+ */
 function findIntroStart(content) {
     let foundIntro = false;
+
+    // loops through content line by line
     for (
         var line_index = 0;
         line_index < content.length && !foundIntro;
@@ -203,6 +228,9 @@ function findIntroStart(content) {
         // Find the start of the intro
         line = content[line_index];
         let elements = line?.paragraph?.elements;
+
+        // returns the index of the line where
+        // the word "INTRODUCTION" is found
         if (elements) {
             // This is where we look for the title "INTRODUCTION"
             elements.forEach((e) => {
@@ -224,6 +252,8 @@ function findIntroStart(content) {
  * @param {int} verse_loc
  * @returns
  */
+
+// Not done yet
 function parseLinguistics(document, verse_loc) {
     let lings = {};
     return lings;
@@ -236,6 +266,8 @@ function parseLinguistics(document, verse_loc) {
  *  @param {int} verse_loc
  *  @returns an object containing the interpretations of a verse
  */
+
+// Not done yet
 function parseInterpretations(document, verse_loc) {
     let interps = {};
     return interps;
@@ -248,6 +280,8 @@ function parseInterpretations(document, verse_loc) {
  *  @param {int} verse_loc
  *  @returns an object containing the comments for a verse
  */
+
+// Not done yet
 function parseComments(document, verse_loc) {
     let comments = {};
     return comments;
