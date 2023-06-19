@@ -34,15 +34,16 @@ async function parseDocument(documentId) {
     // Add new_section index extracted_data
     let document = docmetadata.data;
 
-    let intro = parseIntro(document);
+    // ignoring intro for now
+    // let intro = parseIntro(document);
 
-    let indices = getVerseIndices(document);
+    let indices = getVerseIndicesTableFormat(document);
 
     let v_gen = verseGenerator(document, indices);
     let parsed = {
         chapter: Object.keys(indices)[0].split(":")[0],
         verses: {},
-        intro: intro,
+        // intro: intro,
     };
     let verse;
     let done;
@@ -82,6 +83,7 @@ function* verseGenerator(document, verses) {
     for (let v = 0; v < verse_ids.length; v++) {
         verse = {};
         verse_location = verses[verse_ids[v]]; // get the index of the verse in the request body
+        console.log("Verse Location: ", verse_location);
         verse.number = v + 1;
         verse.body_index = verses[verse_ids[v]];
         verse.text = fetchVerse(verse_ids[v]);
@@ -132,6 +134,33 @@ function getVerseIndices(document) {
                 verses[verse] = line_index;
             }
         });
+    });
+    console.log(verses);
+    return verses;
+}
+
+/**
+ *  Fetch the indices of each verse within the body of a document.
+ *
+ *  @param {*} document
+ *  @returns an array of key value pairs (chapter:verse): index
+ */
+
+// ex: 85:1
+function getVerseIndicesTableFormat(document) {
+    let new_format;
+    let content = document.body.content;
+    let verses = {};
+    let verse;
+    content.forEach((line, line_index) => {
+        // checks if the current line contains a green table
+        // for context, the green tables are the ones that contain
+        // verse indices
+        if (line?.table && line.table.tableRows[0].tableCells[0].tableCellStyle?.backgroundColor?.color?.rgbColor?.green > 0.9) {
+            verse = line.table.tableRows[0].tableCells[0].content[0].paragraph.elements[0].textRun.content.trim();
+            verses[verse] = line_index;
+            console.log("Got verse index: ", verses[verse]);
+        }
     });
     console.log(verses);
     return verses;
@@ -234,7 +263,22 @@ function findIntroStart(content) {
         if (elements) {
             // This is where we look for the title "INTRODUCTION"
             elements.forEach((e) => {
-                if (e?.textRun.content.includes("INTRODUCTION")) {
+                console.log(e?.textRun);
+                // what this looks like:
+
+                /*
+                {
+                    content: 'INTRODUCTION\n',
+                    textStyle: {
+                        underline: true,
+                        foregroundColor: { color: [Object] },
+                        fontSize: { magnitude: 20, unit: 'PT' },
+                        weightedFontFamily: { fontFamily: 'Times New Roman', weight: 400 }
+                    }
+                }
+                */
+
+                if (e?.textRun?.content?.includes("INTRODUCTION")) {
                     console.log("We found the intro", line_index);
                     introStart = line_index;
                     foundIntro = true;
