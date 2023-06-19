@@ -299,8 +299,42 @@ function findIntroStart(content) {
 
 // Not done yet
 function parseLinguistics(document, verse_loc) {
-    let lings = {};
-    return lings;
+    // let lings = {};
+    let content = document.body.content;
+
+    let startIndex = getVerseSectionStart(verse_loc, content);
+    let endIndex = getVerseSectionEnd(startIndex, content);
+
+    return getTextInBetween(startIndex, endIndex, content);
+}
+
+function getVerseSectionStart(verse_loc, content) {
+
+    var i;
+
+    for (i = verse_loc; i < content.length; i++) {
+        let line = content[i];
+
+        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
+            return i + 1;
+        }
+    }
+
+}
+
+function getVerseSectionEnd(verse_loc, content) {
+    var i;
+
+    for (i = verse_loc; i < content.length; i++) {
+        let line = content[i];
+
+        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
+            return i - 1;
+        }
+    }
+
+    // reached end of doc page
+    return i - 1;
 }
 
 /**
