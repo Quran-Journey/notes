@@ -141,6 +141,7 @@ function getVerseIndices(document) {
 
 /**
  *  Fetch the indices of each verse within the body of a document.
+ *  This specifically applies to the green boxes where the indices are located in the new notes.
  *
  *  @param {*} document
  *  @returns an array of key value pairs (chapter:verse): index
@@ -167,7 +168,7 @@ function getVerseIndicesTableFormat(document) {
 }
 
 /**
- * A function that focuses on parsing the linguistics of a verse
+ * A function that focuses on parsing the intro section of the notes
  *
  * @param {Object} document
  * @returns intro_sections, which is an object that contains all of the introduction sections.
@@ -240,7 +241,7 @@ function findIntroSections(content) {
 }
 
 /**
- * A function that focuses on parsing the linguistics of a verse
+ * A function that focuses on finding the beginning of the intro section
  *
  * @param {Object} content
  * @returns line_index, where the title "INTRODUCTION" is found
@@ -294,7 +295,7 @@ function findIntroStart(content) {
  *
  * @param {Object} document
  * @param {int} verse_loc
- * @returns
+ * @returns text array wich contains all the text in between start and end of linguistic meaning section
  */
 
 // Not done yet
@@ -308,33 +309,45 @@ function parseLinguistics(document, verse_loc) {
     return getTextInBetween(startIndex, endIndex, content);
 }
 
+/**
+ * A function that focuses on finding the beginning of a verse section
+ *
+ * @param {Object} content
+ * @returns line_index, which is the index where the current verse section begins
+ */
 function getVerseSectionStart(verse_loc, content) {
 
-    var i;
+    var line_index;
 
-    for (i = verse_loc; i < content.length; i++) {
-        let line = content[i];
+    for (line_index = verse_loc; line_index < content.length; line_index++) {
+        let line = content[line_index];
 
         if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
-            return i + 1;
+            return line_index + 1;
         }
     }
 
 }
 
+/**
+ * A function that focuses on finding the end of a verse section
+ *
+ * @param {Object} content
+ * @returns line_index, which is the index where the current verse section ends
+ */
 function getVerseSectionEnd(verse_loc, content) {
-    var i;
+    var line_index;
 
-    for (i = verse_loc; i < content.length; i++) {
+    for (line_index = verse_loc; line_index < content.length; line_index++) {
         let line = content[i];
 
         if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
-            return i - 1;
+            return line_index - 1;
         }
     }
 
     // reached end of doc page
-    return i - 1;
+    return line_index - 1;
 }
 
 /**
