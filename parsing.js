@@ -61,7 +61,7 @@ async function parseDocument(documentId) {
  * @param {int} start
  * @param {int} end
  * @param {Object} content, basically whole document
- * @returns text array wich contains all the text in between start and end
+ * @returns text array which contains all the text in between start and end
  */
 function getTextInBetween(start, end, content) {
     let text = [];
@@ -73,8 +73,6 @@ function getTextInBetween(start, end, content) {
 
 /**
  *  A generator function that helps us parse a single verse when called.
- *  
- *  USED FOR TESTING PURPOSES
  * 
  *  @param {Object} document
  *  @param {Object} verses
@@ -88,25 +86,13 @@ function* verseGenerator(document, verses) {
         console.log("Verse Location: ", verse_location);
         verse.number = v + 1;
         verse.body_index = verses[verse_ids[v]];
-        verse.text = fetchVerse(verse_ids[v]);
         verse.linguistics = parseLinguistics(document, verse_location);
-        verse.interpretations = parseInterpretations(document, verse_location);
+        verse.tafsir = parseTafsir(document, verse_location);
         verse.comments = parseComments(document, verse_location);
         console.log(verse);
 
         yield verse;
     }
-}
-
-/**
- * Fetch a verse by it's id from quran.com.
- *
- * @param {string} verse_id
- * @return a verse object that contains the arabic uthmani repr, transliteration... and?
- */
-function fetchVerse(verse_id) {
-    let verse = {};
-    return verse;
 }
 
 /**
@@ -119,7 +105,6 @@ function fetchVerse(verse_id) {
 
 // ex: 85:1
 function getVerseIndicesTableFormat(document) {
-    let new_format;
     let content = document.body.content;
     let verses = {};
     let verse;
@@ -251,20 +236,22 @@ function parseLinguistics(document, verse_loc) {
 
     // get the current start and end of the Linguistic Meaning section
     // based on verse_loc index
-    let startIndex = getVerseSectionStart(verse_loc, content);
-    let endIndex = getVerseSectionEnd(startIndex, content);
+    const [start_index, end_index] = getVerseSectionStartAndEnd(verse_loc, content);
 
     // return the text between the start and end indices (JSON)
-    return getTextInBetween(startIndex, endIndex, content);
+    return getTextInBetween(start_index, end_index, content);
 }
 
 /**
- * A function that focuses on finding the beginning of a verse section
+ * A function that focuses on finding the start and end of a verse section
  *
  * @param {Object} content
- * @returns line_index, which is the index where the current verse section begins
+ * @returns an array which contains the start index and end index of the verse section in the document
  */
-function getVerseSectionStart(verse_loc, content) {
+function getVerseSectionStartAndEnd(verse_loc, content) {
+    var start_index;
+    var end_index;
+    var found_start = false;
 
     var line_index;
 
@@ -274,33 +261,21 @@ function getVerseSectionStart(verse_loc, content) {
         // if the current text is underlined then it marks the
         // header/start of the current verse section
         if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
-            return line_index + 1;
+            if (!found_start) {
+                start_index = line_index + 1;
+                found_start = true;
+            }
+
+            else {
+                break;
+            }
         }
     }
 
-}
+    end_index = line_index - 1;
 
-/**
- * A function that focuses on finding the end of a verse section
- *
- * @param {Object} content
- * @returns line_index, which is the index where the current verse section ends
- */
-function getVerseSectionEnd(verse_loc, content) {
-    var line_index;
+    return [start_index, end_index];
 
-    for (line_index = verse_loc; line_index < content.length; line_index++) {
-        let line = content[i];
-
-        // if the current text is underlined then it marks the
-        // header/start of the next verse section (current section ended)
-        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
-            return line_index - 1;
-        }
-    }
-
-    // reached end of doc page
-    return line_index - 1;
 }
 
 /**
@@ -310,7 +285,7 @@ function getVerseSectionEnd(verse_loc, content) {
  *  @param {int} verse_loc
  *  @returns an object containing the interpretations of a verse
  */
-function parseInterpretations(document, verse_loc) {
+function parseTafsir(document, verse_loc) {
     let interps = {};
     return interps;
 }
