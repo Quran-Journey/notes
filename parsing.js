@@ -34,15 +34,16 @@ async function parseDocument(documentId) {
     // Add new_section index extracted_data
     let document = docmetadata.data;
 
-    let intro = parseIntro(document);
+    // ignoring intro for now
+    // let intro = parseIntro(document);
 
-    let indices = getVerseIndices(document);
+    let indices = getVerseIndicesTableFormat(document);
 
     let v_gen = verseGenerator(document, indices);
     let parsed = {
         chapter: Object.keys(indices)[0].split(":")[0],
         verses: {},
-        intro: intro,
+        // intro: intro,
     };
     let verse;
     let done;
@@ -57,7 +58,10 @@ async function parseDocument(documentId) {
 /**
  * Get all of the text in between two indices.
  *
- * @param {*} content
+ * @param {int} start
+ * @param {int} end
+ * @param {Object} content, basically whole document
+ * @returns text array which contains all the text in between start and end
  */
 function getTextInBetween(start, end, content) {
     let text = [];
@@ -69,7 +73,7 @@ function getTextInBetween(start, end, content) {
 
 /**
  *  A generator function that helps us parse a single verse when called.
- *
+ * 
  *  @param {Object} document
  *  @param {Object} verses
  */
@@ -79,56 +83,47 @@ function* verseGenerator(document, verses) {
     for (let v = 0; v < verse_ids.length; v++) {
         verse = {};
         verse_location = verses[verse_ids[v]]; // get the index of the verse in the request body
+        console.log("Verse Location: ", verse_location);
         verse.number = v + 1;
         verse.body_index = verses[verse_ids[v]];
-        verse.text = fetchVerse(verse_ids[v]);
         verse.linguistics = parseLinguistics(document, verse_location);
-        verse.interpretations = parseInterpretations(document, verse_location);
+        verse.tafsir = parseTafsir(document, verse_location);
         verse.comments = parseComments(document, verse_location);
         console.log(verse);
+
         yield verse;
     }
 }
 
 /**
- * Fetch a verse by it's id from quran.com.
- *
- * @param {string} verse_id
- * @return a verse object that contains the arabic uthmani repr, transliteration... and?
- */
-function fetchVerse(verse_id) {
-    let verse = {};
-    return verse;
-}
-
-/**
  *  Fetch the indices of each verse within the body of a document.
+ *  This specifically applies to the green boxes where the indices are located in the new notes.
  *
  *  @param {*} document
  *  @returns an array of key value pairs (chapter:verse): index
  */
-function getVerseIndices(document) {
-    let new_format;
+
+// ex: 85:1
+function getVerseIndicesTableFormat(document) {
     let content = document.body.content;
     let verses = {};
     let verse;
     content.forEach((line, line_index) => {
-        line?.paragraph?.elements.forEach((element) => {
-            if (element?.horizontalRule) {
-                verse =
-                    content[
-                        line_index + 1
-                    ].paragraph.elements[0].textRun.content.trim();
-                verses[verse] = line_index;
-            }
-        });
+        // Checks if the current line contains a green table.
+        // For context, the green tables are the ones that contain
+        // verse indices
+        if (line?.table && line.table.tableRows[0].tableCells[0].tableCellStyle?.backgroundColor?.color?.rgbColor?.green > 0.9) {
+            verse = line.table.tableRows[0].tableCells[0].content[0].paragraph.elements[0].textRun.content.trim();
+            verses[verse] = line_index;
+            console.log("Got verse index: ", verses[verse]);
+        }
     });
     console.log(verses);
     return verses;
 }
 
 /**
- * A function that focuses on parsing the linguistics of a verse
+ * A function that focuses on parsing the intro section of the notes
  *
  * @param {Object} document
  * @returns intro_sections, which is an object that contains all of the introduction sections.
@@ -167,6 +162,8 @@ function findIntroSections(content) {
                     return sections;
                 }
             }
+
+            // found an intro section
             if (style.alignment == "CENTER") {
                 elements.forEach((e) => {
                     let textStyle = e?.textRun?.textStyle;
@@ -193,8 +190,15 @@ function findIntroSections(content) {
     return sections;
 }
 
+/**
+ * A function that focuses on finding the beginning of the intro section
+ *
+ * @param {Object} content
+ * @returns line_index, where the title "INTRODUCTION" is found
+ */
 function findIntroStart(content) {
     let foundIntro = false;
+
     for (
         var line_index = 0;
         line_index < content.length && !foundIntro;
@@ -203,10 +207,13 @@ function findIntroStart(content) {
         // Find the start of the intro
         line = content[line_index];
         let elements = line?.paragraph?.elements;
+
+        // returns the index of the line where
+        // the word "INTRODUCTION" is found
         if (elements) {
             // This is where we look for the title "INTRODUCTION"
             elements.forEach((e) => {
-                if (e?.textRun.content.includes("INTRODUCTION")) {
+                if (e?.textRun?.content?.includes("INTRODUCTION")) {
                     console.log("We found the intro", line_index);
                     introStart = line_index;
                     foundIntro = true;
@@ -222,11 +229,53 @@ function findIntroStart(content) {
  *
  * @param {Object} document
  * @param {int} verse_loc
- * @returns
+ * @returns text array wich contains all the text in between start and end of linguistic meaning section
  */
 function parseLinguistics(document, verse_loc) {
-    let lings = {};
-    return lings;
+    let content = document.body.content;
+
+    // get the current start and end of the Linguistic Meaning section
+    // based on verse_loc index
+    const [start_index, end_index] = getVerseSectionStartAndEnd(verse_loc, content);
+
+    // return the text between the start and end indices (JSON)
+    return getTextInBetween(start_index, end_index, content);
+}
+
+/**
+ * A function that focuses on finding the start and end of a verse section
+ *
+ * @param {Object} content
+ * @returns an array which contains the start index and end index of the verse section in the document
+ */
+function getVerseSectionStartAndEnd(verse_loc, content) {
+    var start_index;
+    var end_index;
+    var found_start = false;
+
+    var line_index;
+
+    for (line_index = verse_loc; line_index < content.length; line_index++) {
+        let line = content[line_index];
+
+        // if the current text is underlined then it marks the
+        // header/start of the current verse section
+        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
+            if (!found_start) {
+                start_index = line_index + 1;
+                found_start = true;
+            }
+
+            else {
+                break;
+            }
+        }
+    }
+
+    end_index = line_index - 1;
+
+    return [start_index, end_index];
+
 }
 
 /**
@@ -236,7 +285,7 @@ function parseLinguistics(document, verse_loc) {
  *  @param {int} verse_loc
  *  @returns an object containing the interpretations of a verse
  */
-function parseInterpretations(document, verse_loc) {
+function parseTafsir(document, verse_loc) {
     let interps = {};
     return interps;
 }
