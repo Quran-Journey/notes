@@ -290,6 +290,8 @@ function parseTafsir(document, verse_loc) {
     return interps;
 }
 
+
+
 /**
  *  A function that focuses on parsing comments.
  *
@@ -298,8 +300,51 @@ function parseTafsir(document, verse_loc) {
  *  @returns an object containing the comments for a verse
  */
 function parseComments(document, verse_loc) {
-    let comments = {};
-    return comments;
+    let content = document.body.content;
+
+    var sectionRanges = getCommentSectionStartAndEnd(content);
+  
+    if (sectionRanges.length >= 2) {
+    var section2Start = sectionRanges[1][0];
+    var section2End = sectionRanges[1][1];
+    var section2Content = content.slice(section2Start, section2End + 1);
+    }
+    // Process section 2 content here
+//   } else {
+    
+//     // Handle the case where section 2 does not exist
+//   }
+  return getTextInBetween(section2Start, section2End + 1, content);
+    
+}
+
+function getCommentSectionStartAndEnd(content) {
+    var sections = [];
+    var start_index;
+    var end_index;
+
+    for (var line_index = 0; line_index < content.length; line_index++) {
+        let line = content[line_index];
+
+        // If the current text is underlined, it marks the start of a verse section
+        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
+            if (start_index !== undefined) {
+                end_index = line_index - 1;
+                sections.push([start_index, end_index]);
+            }
+
+            start_index = line_index + 1;
+            end_index = undefined;
+        }
+    }
+
+    // Push the last section if it exists
+    if (start_index !== undefined && end_index === undefined) {
+        end_index = content.length - 1;
+        sections.push([start_index, end_index]);
+    }
+
+    return sections;
 }
 
 // Feel free to add any helper functions below this comment but above the module exports.
