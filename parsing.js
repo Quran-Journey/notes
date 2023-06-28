@@ -87,13 +87,24 @@ function* verseGenerator(document, verses) {
         verse.number = v + 1;
         verse.body_index = verses[verse_ids[v]];
         verse.linguistics = parseLinguistics(document, verse_location);
-        verse.tafsir = parseTafsir(document, verse_location);
+        verse.variantReadings = parseVariantReadings(document, verse_location); 
+        verse.existingCommentary = parseExistingCommentary(document, verse_location);
+        // verse.tafsir = parseTafsir(document, verse_location);
         verse.comments = parseComments(document, verse_location);
+        verse.connections = parseConnections(document, verse_location);
         console.log(verse);
 
         yield verse;
     }
 }
+
+/* Order of the headings to be parsed
+ * 0. Linguistic meaning
+ * 1. Variant readings
+ * 2. Existing Commentary
+ * 3. Comments/Reflections
+ * 4. Connection with previous ayah and next ayah
+ */
 
 /**
  *  Fetch the indices of each verse within the body of a document.
@@ -299,35 +310,88 @@ function parseTafsir(document, verse_loc) {
  *  @param {int} verse_loc
  *  @returns an object containing the comments for a verse
  */
-function parseComments(document, verse_loc) {
+
+
+
+/**
+ * Order of the headings to be parsed
+ * 1. Linguistic meaning
+ * 2. Variant readings
+ * 3. Existing Commentary
+ * 4. Comments/Reflections
+ * 5. Connection with previous ayah and next ayah
+ */
+
+function parseVariantReadings(document, verse_loc) {
     let content = document.body.content;
 
-    var sectionRanges = getCommentSectionStartAndEnd(content);
+    var sectionRanges = getSectionStartAndEnd(content, verse_loc);
   
     if (sectionRanges.length >= 2) {
-    var section2Start = sectionRanges[1][0];
-    var section2End = sectionRanges[1][1];
-    var section2Content = content.slice(section2Start, section2End + 1);
+    var variantReadingsSectionStart = sectionRanges[1][0];
+    var variantReadingsSectionEnd = sectionRanges[1][1];
+    // var section2Content = content.slice(commentsSectionStart, commentsSectionEnd + 1);
     }
     // Process section 2 content here
-//   } else {
-    
-//     // Handle the case where section 2 does not exist
-//   }
-  return getTextInBetween(section2Start, section2End + 1, content);
+    return getTextInBetween(variantReadingsSectionStart, variantReadingsSectionEnd + 1, content);
     
 }
 
-function getCommentSectionStartAndEnd(content) {
+function parseExistingCommentary(document, verse_loc) {
+    let content = document.body.content;
+
+    var sectionRanges = getSectionStartAndEnd(content, verse_loc);
+  
+    if (sectionRanges.length >= 3) {
+    var existingCommentarySectionStart = sectionRanges[2][0];
+    var existingCommentarySectionEnd = sectionRanges[2][1];
+    // var section2Content = content.slice(commentsSectionStart, commentsSectionEnd + 1);
+    }
+    // Process section 2 content here
+    return getTextInBetween(existingCommentarySectionStart, existingCommentarySectionEnd + 1, content);
+    
+}
+
+function parseComments(document, verse_loc) {
+    let content = document.body.content;
+
+    var sectionRanges = getSectionStartAndEnd(content, verse_loc);
+  
+    if (sectionRanges.length >= 4) {
+    var commentsSectionStart = sectionRanges[3][0];
+    var commentsSectionEnd = sectionRanges[3][1];
+    // var section2Content = content.slice(commentsSectionStart, commentsSectionEnd + 1);
+    }
+    // Process section 2 content here
+    return getTextInBetween(commentsSectionStart, commentsSectionEnd + 1, content);
+    
+}
+
+function parseConnections(document, verse_loc) {
+    let content = document.body.content;
+
+    var sectionRanges = getSectionStartAndEnd(content, verse_loc);
+  
+    if (sectionRanges.length >= 5) {
+    var connectionsSectionStart = sectionRanges[4][0];
+    var connectionsSectionEnd = sectionRanges[4][1];
+    // var section2Content = content.slice(commentsSectionStart, commentsSectionEnd + 1);
+    }
+    // Process section 2 content here
+    return getTextInBetween(connectionsSectionStart, connectionsSectionEnd + 1, content);
+    
+}
+
+function getSectionStartAndEnd(content, verse_loc) {
     var sections = [];
     var start_index;
     var end_index;
 
-    for (var line_index = 0; line_index < content.length; line_index++) {
+    for (var line_index = verse_loc; line_index < content.length; line_index++) {
         let line = content[line_index];
 
         // If the current text is underlined, it marks the start of a verse section
-        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
+        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline && line?.paragraph?.elements[0]?.textRun?.textStyle?.bold) {
             if (start_index !== undefined) {
                 end_index = line_index - 1;
                 sections.push([start_index, end_index]);
@@ -343,7 +407,7 @@ function getCommentSectionStartAndEnd(content) {
         end_index = content.length - 1;
         sections.push([start_index, end_index]);
     }
-
+    console.log("sections",sections);
     return sections;
 }
 
