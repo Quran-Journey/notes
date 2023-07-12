@@ -1,4 +1,21 @@
 const { google } = require("googleapis");
+const fnMap = {
+    "Linguistic Meaning": parseLinguistics,
+    "Variant Readings": parseVariantReadings,
+    "Existing Commentary": parseExistingCommentary,
+    "Comments/Reflections": parseComments,
+    "Connection with other ayat": parseConnections
+};
+
+const headings = ["Linguistic Meaning", "Variant Readings", "Existing Commentary", "Comments/Reflections", "Connection with other ayat"];
+
+/* Order of the headings to be parsed
+ * 0. Linguistic Meaning
+ * 1. Variant Readings
+ * 2. Existing Commentary
+ * 3. Comments/Reflections
+ * 4. Connection with other ayat
+ */
 
 async function getDocument(documentId) {
     const auth = new google.auth.GoogleAuth({
@@ -34,7 +51,7 @@ async function parseDocument(documentId) {
     // Add new_section index extracted_data
     let document = docmetadata.data;
 
-    // ignoring intro for now
+    // TODO - implement parsing intro (ignoring intro for now)
     // let intro = parseIntro(document);
 
     let indices = getVerseIndicesTableFormat(document);
@@ -86,25 +103,194 @@ function* verseGenerator(document, verses) {
         console.log("Verse Location: ", verse_location);
         verse.number = v + 1;
         verse.body_index = verses[verse_ids[v]];
-        verse.linguistics = parseLinguistics(document, verse_location);
-        verse.variantReadings = parseVariantReadings(document, verse_location); 
-        verse.existingCommentary = parseExistingCommentary(document, verse_location);
+        verse.linguistics = {};
+        verse.variantReadings = {};
+        verse.existingCommentary = {};
+        verse.comments = {};
+        verse.connections = {};
+        parseVerse(document, verse, verse_location + 1);
+        // verse.linguistics = parseLinguistics(document, verse_location);
+        // verse.variantReadings = parseVariantReadings(document, verse_location);
+        // verse.existingCommentary = parseExistingCommentary(document, verse_location);
         // verse.tafsir = parseTafsir(document, verse_location);
-        verse.comments = parseComments(document, verse_location);
-        verse.connections = parseConnections(document, verse_location);
+        // verse.comments = parseComments(document, verse_location);
+        // verse.connections = parseConnections(document, verse_location);
         console.log(verse);
 
         yield verse;
     }
 }
 
-/* Order of the headings to be parsed
- * 0. Linguistic meaning
- * 1. Variant readings
- * 2. Existing Commentary
- * 3. Comments/Reflections
- * 4. Connection with previous ayah and next ayah
+/**
+ * A function that focuses on parsing all the sections of the current verse
+ *
+ * @param {Object} document
+ * @param {Object} verse
+ * @param {int} verse_loc
  */
+function parseVerse(document, verse, verse_loc) {
+    let index = verse_loc;
+    let content = document.body.content;
+    let line = content[verse_loc];
+
+    while (index < content.length && !(line?.table && line.table.tableRows[0].tableCells[0].tableCellStyle?.backgroundColor?.color?.rgbColor?.green > 0.9)) {
+        line = content[index];
+
+        // start of a verse section
+        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
+            let verse_header = line?.paragraph?.elements[0].textRun.content.split(":")[0];
+            // DEBUGGING
+            // TODO - REMOVE
+            console.log("verse header: ", verse_header);
+            // console.log("Linguistic Meaning: ", verse_header === "Linguistic Meaning");
+            // console.log("Variant Readings: ", verse_header === "Variant Readings");
+            // console.log("Existing Commentary: ", verse_header === "Existing Commentary");
+            // console.log("Comments/Reflections: ", verse_header === "Comments/Reflections");
+            // console.log("Connection with other ayat: ", verse_header === "Connection with other ayat");
+            if (headings.includes(verse_header)) index = fnMap[verse_header](document, verse, index);
+        }
+
+        index++;
+    }
+}
+
+// TODO - this feels very repeated (follow DRY principle)
+
+/**
+ * A function that focuses on parsing the linguistics of a verse
+ *
+ * @param {Object} document
+ * @param {int} index
+ * @returns text array which contains all the text in between start and end of linguistic meaning section
+ */
+function parseLinguistics(document, verse, index) {
+    let content = document.body.content;
+
+    // get the current start and end of the Linguistic Meaning section
+    // based on index
+    const [start_index, end_index] = getVerseSectionStartAndEnd(index, content);
+
+    // return the text between the start and end indices (JSON)
+    verse.linguistics = getTextInBetween(start_index, end_index, content);
+
+    return end_index;
+}
+
+/**
+ * A function that focuses on parsing the variant readings of a verse
+ *
+ * @param {Object} document
+ * @param {int} index
+ * @returns text array which contains all the text in between start and end of linguistic meaning section
+ */
+function parseVariantReadings(document, verse, index) {
+    let content = document.body.content;
+
+    // get the current start and end of the Variant Readings section
+    // based on index
+    const [start_index, end_index] = getVerseSectionStartAndEnd(index, content);
+
+    // return the text between the start and end indices (JSON)
+    verse.variantReadings = getTextInBetween(start_index, end_index, content);
+
+    return end_index;
+}
+
+/**
+ * A function that focuses on parsing the existing commentary of a verse
+ *
+ * @param {Object} document
+ * @param {int} index
+ * @returns text array which contains all the text in between start and end of linguistic meaning section
+ */
+function parseExistingCommentary(document, verse, index) {
+    let content = document.body.content;
+
+    // get the current start and end of the existing commentary section
+    // based on index
+    const [start_index, end_index] = getVerseSectionStartAndEnd(index, content);
+
+    // return the text between the start and end indices (JSON)
+    verse.existingCommentary = getTextInBetween(start_index, end_index, content);
+
+    return end_index;
+}
+
+/**
+ * A function that focuses on parsing the comments/reflections of a verse
+ *
+ * @param {Object} document
+ * @param {int} index
+ * @returns text array which contains all the text in between start and end of linguistic meaning section
+ */
+function parseComments(document, verse, index) {
+    let content = document.body.content;
+
+    // get the current start and end of the comments/reflections section
+    // based on index
+    const [start_index, end_index] = getVerseSectionStartAndEnd(index, content);
+
+    // return the text between the start and end indices (JSON)
+    verse.comments = getTextInBetween(start_index, end_index, content);
+
+    return end_index;
+}
+
+/**
+ * A function that focuses on parsing the connections (with other ayat) of a verse
+ *
+ * @param {Object} document
+ * @param {int} index
+ * @returns text array which contains all the text in between start and end of linguistic meaning section
+ */
+function parseConnections(document, verse, index) {
+    let content = document.body.content;
+
+    // get the current start and end of the connections with other ayat section
+    // based on index
+    const [start_index, end_index] = getVerseSectionStartAndEnd(index, content);
+
+    // return the text between the start and end indices (JSON)
+    verse.connections = getTextInBetween(start_index, end_index, content);
+
+    return end_index;
+}
+
+/**
+ * A function that focuses on finding the start and end of a verse section
+ *
+ * @param {Object} content
+ * @returns an array which contains the start index and end index of the verse section in the document
+ */
+function getVerseSectionStartAndEnd(verse_loc, content) {
+    var start_index;
+    var end_index;
+    var found_start = false;
+
+    var line_index;
+
+    for (line_index = verse_loc; line_index < content.length; line_index++) {
+        let line = content[line_index];
+
+        // if the current text is underlined then it marks the
+        // header/start of the current verse section
+        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline || (line?.table && line.table.tableRows[0].tableCells[0].tableCellStyle?.backgroundColor?.color?.rgbColor?.green > 0.9)) {
+            if (!found_start) {
+                start_index = line_index + 1;
+                found_start = true;
+            }
+
+            else {
+                break;
+            }
+        }
+    }
+
+    end_index = line_index - 1;
+
+    return [start_index, end_index];
+
+}
 
 /**
  *  Fetch the indices of each verse within the body of a document.
@@ -155,6 +341,12 @@ function parseIntro(document) {
     return intro;
 }
 
+/**
+ * A function that focuses on parsing the intro section of the notes
+ *
+ * @param {Object} document
+ * @returns intro_sections, which is an object that contains all of the introduction sections.
+ */
 function findIntroSections(content) {
     sections = [];
     for (var line_index = 0; line_index < content.length; line_index++) {
@@ -233,182 +425,6 @@ function findIntroStart(content) {
         }
     }
     return introStart;
-}
-
-/**
- * A function that focuses on parsing the linguistics of a verse
- *
- * @param {Object} document
- * @param {int} verse_loc
- * @returns text array wich contains all the text in between start and end of linguistic meaning section
- */
-function parseLinguistics(document, verse_loc) {
-    let content = document.body.content;
-
-    // get the current start and end of the Linguistic Meaning section
-    // based on verse_loc index
-    const [start_index, end_index] = getVerseSectionStartAndEnd(verse_loc, content);
-
-    // return the text between the start and end indices (JSON)
-    return getTextInBetween(start_index, end_index, content);
-}
-
-/**
- * A function that focuses on finding the start and end of a verse section
- *
- * @param {Object} content
- * @returns an array which contains the start index and end index of the verse section in the document
- */
-function getVerseSectionStartAndEnd(verse_loc, content) {
-    var start_index;
-    var end_index;
-    var found_start = false;
-
-    var line_index;
-
-    for (line_index = verse_loc; line_index < content.length; line_index++) {
-        let line = content[line_index];
-
-        // if the current text is underlined then it marks the
-        // header/start of the current verse section
-        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
-            if (!found_start) {
-                start_index = line_index + 1;
-                found_start = true;
-            }
-
-            else {
-                break;
-            }
-        }
-    }
-
-    end_index = line_index - 1;
-
-    return [start_index, end_index];
-
-}
-
-/**
- *  A function that focuses on parsing interpretations.
- *
- *  @param {Object} document
- *  @param {int} verse_loc
- *  @returns an object containing the interpretations of a verse
- */
-function parseTafsir(document, verse_loc) {
-    let interps = {};
-    return interps;
-}
-
-
-
-/**
- *  A function that focuses on parsing comments.
- *
- *  @param {Object} document
- *  @param {int} verse_loc
- *  @returns an object containing the comments for a verse
- */
-
-
-
-/**
- * Order of the headings to be parsed
- * 1. Linguistic meaning
- * 2. Variant readings
- * 3. Existing Commentary
- * 4. Comments/Reflections
- * 5. Connection with previous ayah and next ayah
- */
-
-function parseVariantReadings(document, verse_loc) {
-    let content = document.body.content;
-
-    var sectionRanges = getSectionStartAndEnd(content, verse_loc);
-  
-    if (sectionRanges.length >= 2) {
-    var variantReadingsSectionStart = sectionRanges[1][0];
-    var variantReadingsSectionEnd = sectionRanges[1][1];
-    // var section2Content = content.slice(commentsSectionStart, commentsSectionEnd + 1);
-    }
-    // Process section 2 content here
-    return getTextInBetween(variantReadingsSectionStart, variantReadingsSectionEnd + 1, content);
-    
-}
-
-function parseExistingCommentary(document, verse_loc) {
-    let content = document.body.content;
-
-    var sectionRanges = getSectionStartAndEnd(content, verse_loc);
-  
-    if (sectionRanges.length >= 3) {
-    var existingCommentarySectionStart = sectionRanges[2][0];
-    var existingCommentarySectionEnd = sectionRanges[2][1];
-    // var section2Content = content.slice(commentsSectionStart, commentsSectionEnd + 1);
-    }
-    // Process section 2 content here
-    return getTextInBetween(existingCommentarySectionStart, existingCommentarySectionEnd + 1, content);
-    
-}
-
-function parseComments(document, verse_loc) {
-    let content = document.body.content;
-
-    var sectionRanges = getSectionStartAndEnd(content, verse_loc);
-  
-    if (sectionRanges.length >= 4) {
-    var commentsSectionStart = sectionRanges[3][0];
-    var commentsSectionEnd = sectionRanges[3][1];
-    // var section2Content = content.slice(commentsSectionStart, commentsSectionEnd + 1);
-    }
-    // Process section 2 content here
-    return getTextInBetween(commentsSectionStart, commentsSectionEnd + 1, content);
-    
-}
-
-function parseConnections(document, verse_loc) {
-    let content = document.body.content;
-
-    var sectionRanges = getSectionStartAndEnd(content, verse_loc);
-  
-    if (sectionRanges.length >= 5) {
-    var connectionsSectionStart = sectionRanges[4][0];
-    var connectionsSectionEnd = sectionRanges[4][1];
-    // var section2Content = content.slice(commentsSectionStart, commentsSectionEnd + 1);
-    }
-    // Process section 2 content here
-    return getTextInBetween(connectionsSectionStart, connectionsSectionEnd + 1, content);
-    
-}
-
-function getSectionStartAndEnd(content, verse_loc) {
-    var sections = [];
-    var start_index;
-    var end_index;
-
-    for (var line_index = verse_loc; line_index < content.length; line_index++) {
-        let line = content[line_index];
-
-        // If the current text is underlined, it marks the start of a verse section
-        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline && line?.paragraph?.elements[0]?.textRun?.textStyle?.bold) {
-            if (start_index !== undefined) {
-                end_index = line_index - 1;
-                sections.push([start_index, end_index]);
-            }
-
-            start_index = line_index + 1;
-            end_index = undefined;
-        }
-    }
-
-    // Push the last section if it exists
-    if (start_index !== undefined && end_index === undefined) {
-        end_index = content.length - 1;
-        sections.push([start_index, end_index]);
-    }
-    console.log("sections",sections);
-    return sections;
 }
 
 // Feel free to add any helper functions below this comment but above the module exports.
