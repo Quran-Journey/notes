@@ -9,14 +9,6 @@ const fnMap = {
 
 const headings = ["Linguistic Meaning", "Variant Readings", "Existing Commentary", "Comments/Reflections", "Connection with other ayat"];
 
-/* Order of the headings to be parsed
- * 0. Linguistic Meaning
- * 1. Variant Readings
- * 2. Existing Commentary
- * 3. Comments/Reflections
- * 4. Connection with other ayat
- */
-
 async function getDocument(documentId) {
     const auth = new google.auth.GoogleAuth({
         keyFile: "credentials.json",
@@ -82,7 +74,7 @@ async function parseDocument(documentId) {
  */
 function getTextInBetween(start, end, content) {
     let text = [];
-    for (var i = start; i < end; i++) {
+    for (var i = start; i <= end; i++) {
         text.push(content[i].paragraph);
     }
     return text;
@@ -109,12 +101,6 @@ function* verseGenerator(document, verses) {
         verse.comments = {};
         verse.connections = {};
         parseVerse(document, verse, verse_location + 1);
-        // verse.linguistics = parseLinguistics(document, verse_location);
-        // verse.variantReadings = parseVariantReadings(document, verse_location);
-        // verse.existingCommentary = parseExistingCommentary(document, verse_location);
-        // verse.tafsir = parseTafsir(document, verse_location);
-        // verse.comments = parseComments(document, verse_location);
-        // verse.connections = parseConnections(document, verse_location);
         console.log(verse);
 
         yield verse;
@@ -139,14 +125,6 @@ function parseVerse(document, verse, verse_loc) {
         // start of a verse section
         if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline) {
             let verse_header = line?.paragraph?.elements[0].textRun.content.split(":")[0];
-            // DEBUGGING
-            // TODO - REMOVE
-            console.log("verse header: ", verse_header);
-            // console.log("Linguistic Meaning: ", verse_header === "Linguistic Meaning");
-            // console.log("Variant Readings: ", verse_header === "Variant Readings");
-            // console.log("Existing Commentary: ", verse_header === "Existing Commentary");
-            // console.log("Comments/Reflections: ", verse_header === "Comments/Reflections");
-            // console.log("Connection with other ayat: ", verse_header === "Connection with other ayat");
             if (headings.includes(verse_header)) index = fnMap[verse_header](document, verse, index);
         }
 
