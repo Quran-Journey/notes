@@ -287,8 +287,8 @@ function getVerseIndicesTableFormat(document) {
         // Checks if the current line contains a green table.
         // For context, the green tables are the ones that contain
         // verse indices
-        if (line?.table && line.table.tableRows[0].tableCells[0].tableCellStyle?.backgroundColor?.color?.rgbColor?.green > 0.9) {
-            verse = line.table.tableRows[0].tableCells[0].content[0].paragraph.elements[0].textRun.content.trim();
+        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.bold && line?.paragraph?.paragraphStyle?.alignment === "CENTER" && line.paragraph.elements[0].textRun?.content?.includes(":")) {
+            verse = line.paragraph.elements[0].textRun.content.split(":")[1].trim();
             verses[verse] = line_index;
             console.log("Got verse index: ", verses[verse]);
         }
@@ -404,6 +404,48 @@ function findIntroStart(content) {
     }
     return introStart;
 }
+
+// psql quranjourney -U qj < schema.sql;
+
+// CREATE TABLE
+//     IF NOT EXISTS Mufasir (
+//         mufasir_id SERIAL PRIMARY KEY,
+//         mufasir_name TEXT NOT NULL,
+//         death VARCHAR(30) NOT NULL
+//     );
+
+// DROP TABLE IF EXISTS Book CASCADE;
+
+// CREATE TABLE
+//     IF NOT EXISTS Book (
+//         book_id SERIAL PRIMARY KEY,
+//         author INTEGER NOT NULL,
+//         title TEXT NOT NULL,
+//         FOREIGN KEY (author) REFERENCES Mufasir(mufasir_id) ON DELETE CASCADE ON UPDATE CASCADE
+//     );
+
+// DROP TABLE IF EXISTS Tafsir CASCADE;
+
+// CREATE TABLE
+//     IF NOT EXISTS Tafsir (
+//         tafsir_id SERIAL PRIMARY KEY,
+//         tafsir_text TEXT NOT NULL,
+//         book INTEGER NOT NULL,
+//         verse_id INTEGER NOT NULL,
+//         visible BOOLEAN NOT NULL,
+//         FOREIGN KEY (verse_id) REFERENCES Verse(verse_index) ON DELETE CASCADE ON UPDATE CASCADE,
+//         FOREIGN KEY (book) REFERENCES Book(book_id) ON DELETE CASCADE ON UPDATE CASCADE
+//     );
+
+// DROP TABLE IF EXISTS MufasirTafsir CASCADE;
+
+// CREATE TABLE
+//     IF NOT EXISTS MufasirTafsir (
+//         mufasir INT,
+//         tafsir INT,
+//         FOREIGN KEY (mufasir) REFERENCES Mufasir(mufasir_id) ON DELETE CASCADE ON UPDATE CASCADE,
+//         FOREIGN KEY (tafsir) REFERENCES Tafsir(tafsir_id) ON DELETE CASCADE ON UPDATE CASCADE
+//     );
 
 // Feel free to add any helper functions below this comment but above the module exports.
 
