@@ -112,6 +112,7 @@ CREATE TABLE
         book_id SERIAL PRIMARY KEY,
         author INTEGER NOT NULL,
         title TEXT NOT NULL,
+        publication_year VARCHAR(30),
         FOREIGN KEY (author) REFERENCES Mufasir(mufasir_id) ON DELETE CASCADE ON UPDATE CASCADE
     );
 

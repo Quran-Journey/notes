@@ -119,7 +119,7 @@ function parseVerse(document, verse, verse_loc) {
     let content = document.body.content;
     let line = content[verse_loc];
 
-    while (index < content.length && !(line?.table && line.table.tableRows[0].tableCells[0].tableCellStyle?.backgroundColor?.color?.rgbColor?.green > 0.9)) {
+    while (index < content.length && !(line?.paragraph?.elements[0]?.textRun?.textStyle?.bold && line?.paragraph?.paragraphStyle?.alignment === "CENTER" && line.paragraph.elements[0].textRun?.content?.includes(":"))) {
         line = content[index];
 
         // start of a verse section
@@ -235,42 +235,6 @@ function parseConnections(document, verse, index) {
 }
 
 /**
- * A function that focuses on finding the start and end of a verse section
- *
- * @param {Object} content
- * @returns an array which contains the start index and end index of the verse section in the document
- */
-function getVerseSectionStartAndEnd(verse_loc, content) {
-    var start_index;
-    var end_index;
-    var found_start = false;
-
-    var line_index;
-
-    for (line_index = verse_loc; line_index < content.length; line_index++) {
-        let line = content[line_index];
-
-        // if the current text is underlined then it marks the
-        // header/start of the current verse section
-        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline || (line?.table && line.table.tableRows[0].tableCells[0].tableCellStyle?.backgroundColor?.color?.rgbColor?.green > 0.9)) {
-            if (!found_start) {
-                start_index = line_index + 1;
-                found_start = true;
-            }
-
-            else {
-                break;
-            }
-        }
-    }
-
-    end_index = line_index - 1;
-
-    return [start_index, end_index];
-
-}
-
-/**
  *  Fetch the indices of each verse within the body of a document.
  *  This specifically applies to the green boxes where the indices are located in the new notes.
  *
@@ -288,12 +252,12 @@ function getVerseIndicesTableFormat(document) {
         // For context, the green tables are the ones that contain
         // verse indices
         if (line?.paragraph?.elements[0]?.textRun?.textStyle?.bold && line?.paragraph?.paragraphStyle?.alignment === "CENTER" && line.paragraph.elements[0].textRun?.content?.includes(":")) {
-            verse = line.paragraph.elements[0].textRun.content.split(":")[1].trim();
+            verse = line.paragraph.elements[0].textRun.content;
             verses[verse] = line_index;
             console.log("Got verse index: ", verses[verse]);
         }
     });
-    console.log(verses);
+
     return verses;
 }
 
@@ -406,46 +370,6 @@ function findIntroStart(content) {
 }
 
 // psql quranjourney -U qj < schema.sql;
-
-// CREATE TABLE
-//     IF NOT EXISTS Mufasir (
-//         mufasir_id SERIAL PRIMARY KEY,
-//         mufasir_name TEXT NOT NULL,
-//         death VARCHAR(30) NOT NULL
-//     );
-
-// DROP TABLE IF EXISTS Book CASCADE;
-
-// CREATE TABLE
-//     IF NOT EXISTS Book (
-//         book_id SERIAL PRIMARY KEY,
-//         author INTEGER NOT NULL,
-//         title TEXT NOT NULL,
-//         FOREIGN KEY (author) REFERENCES Mufasir(mufasir_id) ON DELETE CASCADE ON UPDATE CASCADE
-//     );
-
-// DROP TABLE IF EXISTS Tafsir CASCADE;
-
-// CREATE TABLE
-//     IF NOT EXISTS Tafsir (
-//         tafsir_id SERIAL PRIMARY KEY,
-//         tafsir_text TEXT NOT NULL,
-//         book INTEGER NOT NULL,
-//         verse_id INTEGER NOT NULL,
-//         visible BOOLEAN NOT NULL,
-//         FOREIGN KEY (verse_id) REFERENCES Verse(verse_index) ON DELETE CASCADE ON UPDATE CASCADE,
-//         FOREIGN KEY (book) REFERENCES Book(book_id) ON DELETE CASCADE ON UPDATE CASCADE
-//     );
-
-// DROP TABLE IF EXISTS MufasirTafsir CASCADE;
-
-// CREATE TABLE
-//     IF NOT EXISTS MufasirTafsir (
-//         mufasir INT,
-//         tafsir INT,
-//         FOREIGN KEY (mufasir) REFERENCES Mufasir(mufasir_id) ON DELETE CASCADE ON UPDATE CASCADE,
-//         FOREIGN KEY (tafsir) REFERENCES Tafsir(tafsir_id) ON DELETE CASCADE ON UPDATE CASCADE
-//     );
 
 // Feel free to add any helper functions below this comment but above the module exports.
 
