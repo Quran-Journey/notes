@@ -48,9 +48,12 @@ async function parseDocument(documentId) {
 
     let indices = getVerseIndicesTableFormat(document);
 
+    // let books = parseBooks(document);
+
     let v_gen = verseGenerator(document, indices);
     let parsed = {
         chapter: Object.keys(indices)[0].split(":")[0],
+        // books: books,
         verses: {},
         // intro: intro,
     };
@@ -131,8 +134,6 @@ function parseVerse(document, verse, verse_loc) {
         index++;
     }
 }
-
-// TODO - this feels very repeated (follow DRY principle)
 
 /**
  * A function that focuses on parsing the linguistics of a verse
