@@ -102,7 +102,7 @@ CREATE TABLE
     IF NOT EXISTS Mufasir (
         mufasir_id SERIAL PRIMARY KEY,
         mufasir_name TEXT NOT NULL,
-        death VARCHAR(30) NOT NULL
+        death VARCHAR(30)
     );
 
 DROP TABLE IF EXISTS Book CASCADE;

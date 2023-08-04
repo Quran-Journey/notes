@@ -18,7 +18,8 @@
   "homepage": "https://github.com/osamaramihafez/sheetsParsing#readme",
   "dependencies": {
     "express": "^4.17.2",
-    "googleapis": "^95.0.0"
+    "googleapis": "^95.0.0",
+    "pg": "^8.11.2"
   },
   "prettier": {
     "tabWidth": 4

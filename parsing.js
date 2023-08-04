@@ -1,4 +1,6 @@
+const { Client } = require('pg');
 const { google } = require("googleapis");
+
 const fnMap = {
     "Linguistic Meaning": parseLinguistics,
     "Variant Readings": parseVariantReadings,
@@ -32,8 +34,8 @@ async function parseDocument(documentId) {
         keyFile: "credentials.json",
         scopes: "https://www.googleapis.com/auth/documents",
     });
-    const client = await auth.getClient();
-    const googleDocs = google.docs({ version: "v1", auth: client });
+    const googleClient = await auth.getClient();
+    const googleDocs = google.docs({ version: "v1", auth: googleClient });
 
     const docmetadata = await googleDocs.documents.get({
         auth,
@@ -43,17 +45,38 @@ async function parseDocument(documentId) {
     // Add new_section index extracted_data
     let document = docmetadata.data;
 
+    // TODO - should probably put this in an env file!
+    const client = new Client({
+        user: 'qj',
+        host: 'localhost',
+        database: 'quranjourney',
+        password: 'Yatathakar123!',
+        port: 5432,
+    })
+
+    await client.connect()
+
     // TODO - implement parsing intro (ignoring intro for now)
     // let intro = parseIntro(document);
 
     let indices = getVerseIndicesTableFormat(document);
 
-    // let books = parseBooks(document);
+    let books = parseBooks(document);
+
+    const query = {
+        text: 'INSERT INTO Mufasir(mufasir_name) VALUES($1)',
+        values: [books[0].authors[0]],
+    }
+
+    const res = await client.query(query)
+    console.log(res.rows[0])
+    console.log(await client.query('SELECT * FROM Mufasir'))
+    await client.end()
 
     let v_gen = verseGenerator(document, indices);
     let parsed = {
         chapter: Object.keys(indices)[0].split(":")[0],
-        // books: books,
+        books: books,
         verses: {},
         // intro: intro,
     };
@@ -81,6 +104,79 @@ function getTextInBetween(start, end, content) {
         text.push(content[i].paragraph);
     }
     return text;
+}
+
+/**
+ * Gets all parsed data from the books table in the intro
+ *
+ * @param {Object} document, document object retrieved from Google Drive
+ * @returns books array, contains the bookNames, codex, authors, and publication years of each book in the table
+ */
+function parseBooks(document) {
+    let content = document.body.content;
+
+    let table;
+
+    for (let i = 0; i < content.length; i++) {
+        let line = content[i];
+
+        if (line?.table?.columns == 4) {
+            table = line.table;
+        }
+    }
+
+    let books = [];
+
+    let book = {
+        codex: '',
+        bookName: '',
+        authors: [],
+        publicationYear: ''
+    };
+
+    for (let i = 1; i < table.rows; i++) {
+        for (let j = 0; j < 4; j++) {
+            switch (j) {
+                // codex
+                case 0:
+                    book.codex = table.tableRows[i].tableCells[j].content[0].paragraph.elements[0].textRun.content;
+                    break;
+
+                // book name
+                case 1:
+                    book.bookName = table.tableRows[i].tableCells[j].content[0].paragraph.elements[0].textRun.content;
+                    break;
+
+                // authors
+                case 2:
+                    let cellContent = table.tableRows[i].tableCells[j].content;
+
+                    cellContent.forEach(bulletPoint => {
+                        book.authors.push(bulletPoint.paragraph.elements[0].textRun.content);
+                    });
+                    break;
+
+                // publication year
+                case 3:
+                    book.publicationYear = table.tableRows[i].tableCells[j].content[0].paragraph.elements[0].textRun.content;
+                    break;
+
+                default:
+                    throw Error('can\'t have more than 4 columns');
+            }
+        }
+
+        books.push(book);
+
+        book = {
+            codex: '',
+            bookName: '',
+            authors: [],
+            publicationYear: ''
+        };
+    }
+
+    return books;
 }
 
 /**
@@ -233,6 +329,42 @@ function parseConnections(document, verse, index) {
     verse.connections = getTextInBetween(start_index, end_index, content);
 
     return end_index;
+}
+
+/**
+ * A function that focuses on finding the start and end of a verse section
+ *
+ * @param {Object} content
+ * @returns an array which contains the start index and end index of the verse section in the document
+ */
+function getVerseSectionStartAndEnd(verse_loc, content) {
+    var start_index;
+    var end_index;
+    var found_start = false;
+
+    var line_index;
+
+    for (line_index = verse_loc; line_index < content.length; line_index++) {
+        let line = content[line_index];
+
+        // if the current text is underlined then it marks the
+        // header/start of the current verse section
+        if (line?.paragraph?.elements[0]?.textRun?.textStyle?.underline || (line?.table && line.table.tableRows[0].tableCells[0].tableCellStyle?.backgroundColor?.color?.rgbColor?.green > 0.9)) {
+            if (!found_start) {
+                start_index = line_index + 1;
+                found_start = true;
+            }
+
+            else {
+                break;
+            }
+        }
+    }
+
+    end_index = line_index - 1;
+
+    return [start_index, end_index];
+
 }
 
 /**

@@ -1,5 +1,7 @@
 const express = require("express");
 const { parseDocument, getDocument } = require("./parsing");
+// import { Pool, Client } from 'pg'
+const { Pool, Client } = require('pg');
 
 const app = express();
 
@@ -24,6 +26,8 @@ app.get("/", async (req, res) => {
  * example document_id: 11wJIGkCKk9GMyOdNlcQMnlJ-7K-VXmb1mA0QsFzG79k
  */
 app.get("/docs/parse/:document_id", async (req, res) => {
+
+
     res.send(await parseDocument(req.params.document_id));
 });
 
