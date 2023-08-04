@@ -54,6 +54,7 @@ async function parseDocument(documentId) {
         port: 5432,
     })
 
+    // connecting to Postgres Client
     await client.connect()
 
     // TODO - implement parsing intro (ignoring intro for now)
